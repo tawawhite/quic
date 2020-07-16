@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type packetSpace int
+type packetSpace uint8
 
 const (
 	packetSpaceInitial packetSpace = iota
@@ -14,7 +14,18 @@ const (
 	packetSpaceCount
 )
 
-type packetType int
+var packetSpaceNames = [...]string{
+	packetSpaceInitial:     "initial",
+	packetSpaceHandshake:   "handshake",
+	packetSpaceApplication: "application_data",
+	packetSpaceCount:       "",
+}
+
+func (s packetSpace) String() string {
+	return packetSpaceNames[s]
+}
+
+type packetType uint8
 
 const (
 	packetTypeInitial packetType = iota
@@ -27,10 +38,10 @@ const (
 
 var packetTypeNames = [...]string{
 	packetTypeInitial:            "initial",
-	packetTypeZeroRTT:            "zeroRTT",
+	packetTypeZeroRTT:            "zerortt",
 	packetTypeHandshake:          "handshake",
 	packetTypeRetry:              "retry",
-	packetTypeVersionNegotiation: "version",
+	packetTypeVersionNegotiation: "version_negotiation",
 	packetTypeShort:              "short",
 }
 

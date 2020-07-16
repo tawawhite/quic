@@ -11,7 +11,7 @@ import (
 	"golang.org/x/crypto/chacha20"
 )
 
-type cryptoLevel int
+type cryptoLevel uint8
 
 const (
 	cryptoLevelInitial cryptoLevel = iota
@@ -32,18 +32,16 @@ type initialAEAD struct {
 }
 
 // https://quicwg.org/base-drafts/draft-ietf-quic-tls.html#initial-secrets
-func newInitialAEAD(cid []byte) *initialAEAD {
+func (s *initialAEAD) init(cid []byte) {
 	suite := tls13.CipherSuiteByID(tls.TLS_AES_128_GCM_SHA256)
 	initialSecret := suite.Extract(cid, initialSalt)
-	aead := &initialAEAD{}
 	// client
 	clientSecret := deriveSecret(suite, initialSecret, "client in")
-	aead.client.init(suite, clientSecret)
+	s.client.init(suite, clientSecret)
 
 	// server
 	serverSecret := deriveSecret(suite, initialSecret, "server in")
-	aead.server.init(suite, serverSecret)
-	return aead
+	s.server.init(suite, serverSecret)
 }
 
 func deriveSecret(suite tls13.CipherSuite, secret []byte, label string) []byte {

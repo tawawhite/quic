@@ -18,6 +18,12 @@ const (
 	maxTokenLen     = 64 + transport.MaxCIDLength
 )
 
+// Extend transport events
+const (
+	EventConnAccept = "conn_accept"
+	EventConnClose  = "conn_close"
+)
+
 // Conn is an asynchronous QUIC connection.
 type Conn interface {
 	net.Conn
@@ -29,35 +35,31 @@ type Conn interface {
 
 // Handler defines interface to handle QUIC connection states.
 type Handler interface {
-	Serve(conn Conn, events []interface{})
+	Serve(conn Conn, events []transport.Event)
 }
 
 type noopHandler struct{}
 
-func (s noopHandler) Serve(Conn, []interface{}) {}
-
-// ConnAcceptEvent is an event where a new connection is established.
-type ConnAcceptEvent struct{}
-
-// ConnCloseEvent is an event where a connection is closed.
-type ConnCloseEvent struct{}
+func (s noopHandler) Serve(Conn, []transport.Event) {}
 
 // remoteConn implements Conn.
 type remoteConn struct {
-	scid [transport.MaxCIDLength]byte
+	scid []byte
 	addr net.Addr
 	conn *transport.Conn
 
-	events []interface{}
+	events []transport.Event
 	recvCh chan *packet
 
 	// Current stream for Read and Write
 	stream *transport.Stream
 }
 
-func newRemoteConn(addr net.Addr) *remoteConn {
+func newRemoteConn(addr net.Addr, scid []byte, conn *transport.Conn) *remoteConn {
 	return &remoteConn{
 		addr:   addr,
+		scid:   scid,
+		conn:   conn,
 		recvCh: make(chan *packet, 1),
 	}
 }
@@ -182,7 +184,7 @@ func (s *localConn) handleConn(c *remoteConn) {
 		} else {
 			if c.conn.IsEstablished() {
 				// Maybe also attach packet header in the event?
-				c.events = append(c.events, ConnAcceptEvent{})
+				c.events = append(c.events, transport.Event{Type: EventConnAccept})
 				established = true
 				s.serveConn(c)
 			}
@@ -219,7 +221,7 @@ func (s *localConn) sendConn(c *remoteConn, buf []byte) error {
 			return err
 		}
 		if n == 0 {
-			s.logger.Log(LevelDebug, "%s done sending", c.addr)
+			s.logger.Log(LevelTrace, "%s done sending", c.addr)
 			return nil
 		}
 		n, err = s.socket.WriteTo(buf[:n], c.addr)
@@ -234,16 +236,15 @@ func (s *localConn) sendConn(c *remoteConn, buf []byte) error {
 func (s *localConn) serveConn(c *remoteConn) {
 	c.events = c.conn.Events(c.events)
 	s.handler.Serve(c, c.events)
-	// Clear events
 	for i := range c.events {
-		c.events[i] = nil
+		c.events[i] = transport.Event{}
 	}
 	c.events = c.events[:0]
 }
 
 func (s *localConn) connClosed(c *remoteConn) {
 	s.logger.Log(LevelDebug, "%s %x closed", c.addr, c.scid)
-	c.events = append(c.events, ConnCloseEvent{})
+	c.events = append(c.events, transport.Event{Type: EventConnClose})
 	s.serveConn(c)
 	s.peersMu.Lock()
 	delete(s.peers, string(c.scid[:]))
@@ -290,6 +291,11 @@ func (s *localConn) rand(b []byte) error {
 		_, err = rand.Read(b)
 	}
 	return err
+}
+
+func (s *localConn) onLogEvent(e transport.LogEvent) {
+	// TODO: qlog
+	s.logger.Log(LevelDebug, "event %s", e)
 }
 
 type packet struct {

@@ -45,11 +45,11 @@ func serverCommand(args []string) error {
 
 type serverHandler struct{}
 
-func (s *serverHandler) Serve(c quic.Conn, events []interface{}) {
+func (s *serverHandler) Serve(c quic.Conn, events []transport.Event) {
 	for _, e := range events {
-		log.Printf("%s connection event: %#v", c.RemoteAddr(), e)
-		switch e := e.(type) {
-		case transport.StreamRecvEvent:
+		log.Printf("%s connection event: %v", c.RemoteAddr(), e.Type)
+		switch e.Type {
+		case transport.EventStream:
 			st := c.Stream(e.StreamID)
 			if st != nil {
 				// echo data back

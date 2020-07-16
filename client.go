@@ -46,7 +46,7 @@ func (s *Client) Serve() error {
 		if n > 0 {
 			p.data = p.buf[:n]
 			p.addr = addr
-			s.logger.Log(LevelTrace, "%s receveid %d bytes\n%x", addr, n, p.data)
+			s.logger.Log(LevelTrace, "%s received %d bytes\n%x", addr, n, p.data)
 			s.recv(p)
 		} else {
 			freePacket(p)
@@ -64,7 +64,7 @@ func (s *Client) recv(p *packet) {
 		freePacket(p)
 		return
 	}
-	s.logger.Log(LevelDebug, "%s received packet %s", p.addr, &p.header)
+	s.logger.Log(LevelTrace, "%s received packet %s", p.addr, &p.header)
 	s.peersMu.RLock()
 	if s.closing {
 		// Server is closing
@@ -125,13 +125,15 @@ func (s *Client) newConn(addr string) (*remoteConn, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := newRemoteConn(udpAddr)
-	if err = s.rand(c.scid[:]); err != nil {
+	scid := make([]byte, transport.MaxCIDLength)
+	if err = s.rand(scid); err != nil {
 		return nil, fmt.Errorf("generate connection id: %v", err)
 	}
-	c.conn, err = transport.Connect(c.scid[:], s.config)
+	conn, err := transport.Connect(scid, s.config)
 	if err != nil {
 		return nil, err
 	}
+	c := newRemoteConn(udpAddr, scid, conn)
+	c.conn.OnLogEvent(s.onLogEvent)
 	return c, nil
 }

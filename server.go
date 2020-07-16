@@ -210,21 +210,23 @@ func (s *Server) handleNewConn(p *packet) {
 	s.handleConn(c)
 }
 
-func (s *Server) newConn(addr net.Addr, scid, odcid []byte) (*remoteConn, error) {
-	c := newRemoteConn(addr)
-	var err error
-	if len(scid) == len(c.scid) {
-		copy(c.scid[:], scid)
+func (s *Server) newConn(addr net.Addr, oscid, odcid []byte) (*remoteConn, error) {
+	scid := make([]byte, transport.MaxCIDLength)
+	if len(scid) == len(oscid) {
+		copy(scid, oscid)
 	} else {
 		// Generate id for new connection since short packets don't include CID length so
 		// we use MaxCIDLength for all connections
-		if err = s.rand(c.scid[:]); err != nil {
+		if err := s.rand(scid); err != nil {
 			return nil, err
 		}
 	}
-	if c.conn, err = transport.Accept(c.scid[:], odcid, s.config); err != nil {
+	conn, err := transport.Accept(scid, odcid, s.config)
+	if err != nil {
 		return nil, err
 	}
+	c := newRemoteConn(addr, scid, conn)
+	c.conn.OnLogEvent(s.onLogEvent)
 	return c, nil
 }
 

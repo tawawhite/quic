@@ -48,22 +48,22 @@ type clientHandler struct {
 	data string
 }
 
-func (s *clientHandler) Serve(c quic.Conn, events []interface{}) {
+func (s *clientHandler) Serve(c quic.Conn, events []transport.Event) {
 	for _, e := range events {
-		log.Printf("%s connection event: %#v", c.RemoteAddr(), e)
-		switch e := e.(type) {
-		case quic.ConnAcceptEvent:
+		log.Printf("%s connection event: %v", c.RemoteAddr(), e.Type)
+		switch e.Type {
+		case quic.EventConnAccept:
 			st := c.Stream(4)
 			_, _ = st.Write([]byte(s.data))
 			_ = st.Close()
-		case transport.StreamRecvEvent:
+		case transport.EventStream:
 			st := c.Stream(e.StreamID)
 			if st != nil {
 				buf := make([]byte, 512)
 				n, _ := st.Read(buf)
 				log.Printf("stream %d received:\n%s", e.StreamID, buf[:n])
 			}
-		case quic.ConnCloseEvent:
+		case quic.EventConnClose:
 			s.wg.Done()
 		}
 	}
