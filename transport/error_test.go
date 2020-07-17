@@ -14,7 +14,7 @@ func TestErrorFormat(t *testing.T) {
 		{1, "no idea", "internal_error no idea"},
 		{12, "", "application_error"},
 		{0x100, "general", "crypto_error general"},
-		{0x1ff, "", "crypto_error 255"},
+		{0x1ff, "", "crypto_error_255"},
 		{0xffff, "unknown", "65535 unknown"},
 	}
 	for _, d := range data {

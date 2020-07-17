@@ -47,7 +47,7 @@ func errorCodeString(code uint64) string {
 	str := errorText[code]
 	if str == "" {
 		if code&(^(CryptoError - 1)) == CryptoError {
-			str = sprint(errorText[CryptoError], " ", code&(CryptoError-1))
+			str = sprint(errorText[CryptoError], "_", code&(CryptoError-1))
 		} else {
 			str = sprint(code)
 		}

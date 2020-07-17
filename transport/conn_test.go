@@ -166,12 +166,12 @@ func TestSendMaxData(t *testing.T) {
 		offset:   0,
 		data:     b,
 	}
-	_, err = s.recvFrameStream(encodeFrame(stream))
+	_, err = s.recvFrameStream(encodeFrame(stream), testTime())
 	if err != errFlowControl {
 		t.Fatalf("expect error %v, actual %v", errFlowControl, err)
 	}
 	stream.data = b[:100]
-	_, err = s.recvFrameStream(encodeFrame(stream))
+	_, err = s.recvFrameStream(encodeFrame(stream), testTime())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +222,7 @@ func TestRecvResetStream(t *testing.T) {
 	f := resetStreamFrame{
 		streamID: 2,
 	}
-	_, err = conn.recvFrameResetStream(encodeFrame(&f))
+	_, err = conn.recvFrameResetStream(encodeFrame(&f), testTime())
 	if err == nil || err.Error() != "stream_state_error reset stream 2" {
 		t.Fatalf("expect error %v, actual %v", errorText[StreamStateError], err)
 	}
@@ -231,7 +231,7 @@ func TestRecvResetStream(t *testing.T) {
 		streamID:  3,
 		finalSize: 2000,
 	}
-	_, err = conn.recvFrameResetStream(encodeFrame(&f))
+	_, err = conn.recvFrameResetStream(encodeFrame(&f), testTime())
 	if err != errFlowControl {
 		t.Fatalf("expect error %v, actual %v", errFlowControl, err)
 	}
@@ -240,7 +240,7 @@ func TestRecvResetStream(t *testing.T) {
 		streamID:  3,
 		finalSize: 1000,
 	}
-	_, err = conn.recvFrameResetStream(encodeFrame(&f))
+	_, err = conn.recvFrameResetStream(encodeFrame(&f), testTime())
 	if err != errFinalSize {
 		t.Fatalf("expect error %v, actual %v", errFinalSize, err)
 	}
@@ -250,7 +250,7 @@ func TestRecvResetStream(t *testing.T) {
 		errorCode: 5,
 		finalSize: 10,
 	}
-	_, err = conn.recvFrameResetStream(encodeFrame(&f))
+	_, err = conn.recvFrameResetStream(encodeFrame(&f), testTime())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,7 +272,7 @@ func TestRecvStopSending(t *testing.T) {
 	f := stopSendingFrame{
 		streamID: 1,
 	}
-	_, err = conn.recvFrameStopSending(encodeFrame(&f))
+	_, err = conn.recvFrameStopSending(encodeFrame(&f), testTime())
 	if err == nil || err.Error() != "stream_state_error stop sending stream 1" {
 		t.Fatalf("expect error %v, actual %v", errorText[StreamStateError], err)
 	}
@@ -281,7 +281,7 @@ func TestRecvStopSending(t *testing.T) {
 		streamID:  4,
 		errorCode: 9,
 	}
-	_, err = conn.recvFrameStopSending(encodeFrame(&f))
+	_, err = conn.recvFrameStopSending(encodeFrame(&f), testTime())
 	if err != nil {
 		t.Fatal(err)
 	}

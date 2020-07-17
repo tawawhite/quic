@@ -38,7 +38,6 @@ type frame interface {
 	encodedLen() int
 	encoder
 	decoder
-	String() string
 }
 
 // The PADDING frame (type=0x00) has no semantic value.
@@ -318,6 +317,14 @@ type resetStreamFrame struct {
 	finalSize uint64
 }
 
+func newResetStreamFrame(id, code, size uint64) *resetStreamFrame {
+	return &resetStreamFrame{
+		streamID:  id,
+		errorCode: code,
+		finalSize: size,
+	}
+}
+
 func (s *resetStreamFrame) encodedLen() int {
 	return 1 + varintLen(s.streamID) +
 		varintLen(s.errorCode) +
@@ -353,6 +360,13 @@ func (s *resetStreamFrame) String() string {
 type stopSendingFrame struct {
 	streamID  uint64
 	errorCode uint64
+}
+
+func newStopSendingFrame(id, code uint64) *stopSendingFrame {
+	return &stopSendingFrame{
+		streamID:  id,
+		errorCode: code,
+	}
 }
 
 func (s *stopSendingFrame) encodedLen() int {
@@ -571,6 +585,13 @@ type maxStreamsFrame struct {
 	bidi           bool
 }
 
+func newMaxStreamsFrame(max uint64, bidi bool) *maxStreamsFrame {
+	return &maxStreamsFrame{
+		maximumStreams: max,
+		bidi:           bidi,
+	}
+}
+
 func (s *maxStreamsFrame) encodedLen() int {
 	return 1 + varintLen(s.maximumStreams)
 }
@@ -613,6 +634,12 @@ type dataBlockedFrame struct {
 	dataLimit uint64
 }
 
+func newDataBlockedFrame(limit uint64) *dataBlockedFrame {
+	return &dataBlockedFrame{
+		dataLimit: limit,
+	}
+}
+
 func (s *dataBlockedFrame) encodedLen() int {
 	return 1 + varintLen(s.dataLimit)
 }
@@ -650,6 +677,13 @@ type streamDataBlockedFrame struct {
 	dataLimit uint64
 }
 
+func newStreamDataBlockedFrame(id, limit uint64) *streamDataBlockedFrame {
+	return &streamDataBlockedFrame{
+		streamID:  id,
+		dataLimit: limit,
+	}
+}
+
 func (s *streamDataBlockedFrame) encodedLen() int {
 	return 1 + varintLen(s.streamID) + varintLen(s.dataLimit)
 }
@@ -681,6 +715,13 @@ func (s *streamDataBlockedFrame) String() string {
 type streamsBlockedFrame struct {
 	streamLimit uint64
 	bidi        bool
+}
+
+func newStreamsBlockedFrame(limit uint64, bidi bool) *streamsBlockedFrame {
+	return &streamsBlockedFrame{
+		streamLimit: limit,
+		bidi:        bidi,
+	}
 }
 
 func (s *streamsBlockedFrame) encodedLen() int {
@@ -732,6 +773,15 @@ type connectionCloseFrame struct {
 	frameType    uint64
 	reasonPhrase []byte
 	application  bool // application type does not have frameType
+}
+
+func newConnectionCloseFrame(code, frame uint64, reason []byte, app bool) *connectionCloseFrame {
+	return &connectionCloseFrame{
+		errorCode:    code,
+		frameType:    frame,
+		reasonPhrase: reason,
+		application:  app,
+	}
 }
 
 func (s *connectionCloseFrame) encodedLen() int {
@@ -801,6 +851,12 @@ func (s *connectionCloseFrame) String() string {
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type newTokenFrame struct {
 	token []byte
+}
+
+func newNewTokenFrame(token []byte) *newTokenFrame {
+	return &newTokenFrame{
+		token: token,
+	}
 }
 
 func (s *newTokenFrame) encodedLen() int {
