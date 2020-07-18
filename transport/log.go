@@ -3,7 +3,6 @@ package transport
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"strconv"
 	"time"
 )
@@ -24,6 +23,7 @@ type LogEvent struct {
 	Fields []LogField
 }
 
+// newLogEvent creates a new LogEvent.
 func newLogEvent(tm time.Time, tp string) LogEvent {
 	return LogEvent{
 		Time:   tm,
@@ -32,20 +32,22 @@ func newLogEvent(tm time.Time, tp string) LogEvent {
 	}
 }
 
+// AddField adds a key-value field to current event.
+// Only limited types of v are supported.
 func (s *LogEvent) addField(k string, v interface{}) {
 	s.Fields = append(s.Fields, newLogField(k, v))
 }
 
 func (s LogEvent) String() string {
-	buf := bytes.Buffer{}
-	buf.WriteString(s.Time.Format(time.RFC3339))
-	buf.WriteString(" ")
-	buf.WriteString(s.Type)
+	w := bytes.Buffer{}
+	w.WriteString(s.Time.Format(time.RFC3339))
+	w.WriteString(" ")
+	w.WriteString(s.Type)
 	for _, f := range s.Fields {
-		buf.WriteString(" ")
-		buf.WriteString(f.String())
+		w.WriteString(" ")
+		w.WriteString(f.String())
 	}
-	return buf.String()
+	return w.String()
 }
 
 // LogField represents a number or string value.
@@ -105,9 +107,9 @@ func newLogField(key string, val interface{}) LogField {
 
 func (s LogField) String() string {
 	if s.Str == "" {
-		return fmt.Sprintf("%s=%d", s.Key, s.Num)
+		return sprint(s.Key, "=", s.Num)
 	}
-	return fmt.Sprintf("%s=%s", s.Key, s.Str)
+	return s.Key + "=" + s.Str
 }
 
 // Log packets

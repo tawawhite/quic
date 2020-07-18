@@ -841,12 +841,8 @@ func (s *Conn) send(b []byte, space packetSpace, now time.Time) (int, error) {
 	}
 	s.processLostPackets(space)
 	// Add frames
-	op := outgoingPacket{
-		packetNumber: p.packetNumber,
-		frames:       make([]frame, 0, 8),
-		timeSent:     now,
-	}
-	p.payloadLen = s.sendFrames(&op, space, left, now)
+	op := newOutgoingPacket(p.packetNumber, now)
+	p.payloadLen = s.sendFrames(op, space, left, now)
 	if len(op.frames) == 0 {
 		return 0, nil
 	}
@@ -873,6 +869,7 @@ func (s *Conn) send(b []byte, space packetSpace, now time.Time) (int, error) {
 		p.payloadLen += n
 		left -= n
 	}
+	// Include crypto overhead to encode packet header with correct length
 	p.payloadLen += overhead
 	payloadOffset, err := p.encode(b)
 	if err != nil {
@@ -890,8 +887,10 @@ func (s *Conn) send(b []byte, space packetSpace, now time.Time) (int, error) {
 	pnSpace.encryptPacket(b[:n], &p)
 	op.size = uint64(n)
 	// Finish preparing sending packet
-	debug("sending packet %s %s", &p, &op)
-	s.onPacketSent(&op, space)
+	debug("sending packet %s %s", &p, op)
+	s.onPacketSent(op, space)
+	// TODO: Log real payload length without crypto overhead
+	s.logPacketSent(&p, op.frames, now)
 	// On the client, drop initial state after sending an Handshake packet.
 	if s.isClient && p.typ == packetTypeHandshake && s.state == stateAttempted {
 		s.state = stateHandshake
@@ -1300,6 +1299,17 @@ func (s *Conn) logPacketReceived(p *packet, now time.Time) {
 	if s.logEventFn != nil {
 		e := newLogEventPacket(now, logEventPacketReceived, p)
 		s.logEventFn(e)
+	}
+}
+
+func (s *Conn) logPacketSent(p *packet, frames []frame, now time.Time) {
+	if s.logEventFn != nil {
+		e := newLogEventPacket(now, logEventPacketSent, p)
+		s.logEventFn(e)
+		for _, f := range frames {
+			e = newLogEventFrame(now, logEventFramesProcessed, f)
+			s.logEventFn(e)
+		}
 	}
 }
 

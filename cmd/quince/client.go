@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"sync"
 
@@ -16,7 +17,7 @@ func clientCommand(args []string) error {
 	listenAddr := cmd.String("listen", "0.0.0.0:0", "listen on the given IP:port")
 	insecure := cmd.Bool("insecure", false, "skip verifying server certificate")
 	data := cmd.String("data", "GET /\r\n", "sending data")
-	logLevel := cmd.Int("v", quic.LevelInfo, "log verbose level")
+	logLevel := cmd.Int("v", 2, "log verbose: 0=off 1=error 2=info 3=debug 4=trace")
 	cmd.Parse(args)
 
 	addr := cmd.Arg(0)
@@ -31,7 +32,7 @@ func clientCommand(args []string) error {
 	handler := clientHandler{data: *data}
 	client := quic.NewClient(config)
 	client.SetHandler(&handler)
-	client.SetLogger(quic.LeveledLogger(*logLevel))
+	client.SetLogger(*logLevel, os.Stdout)
 	if err := client.ListenAndServe(*listenAddr); err != nil {
 		return err
 	}
