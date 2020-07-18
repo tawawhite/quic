@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type packetSpace int
+type packetSpace uint8
 
 const (
 	packetSpaceInitial packetSpace = iota
@@ -14,7 +14,18 @@ const (
 	packetSpaceCount
 )
 
-type packetType int
+var packetSpaceNames = [...]string{
+	packetSpaceInitial:     "initial",
+	packetSpaceHandshake:   "handshake",
+	packetSpaceApplication: "application_data",
+	packetSpaceCount:       "",
+}
+
+func (s packetSpace) String() string {
+	return packetSpaceNames[s]
+}
+
+type packetType uint8
 
 const (
 	packetTypeInitial packetType = iota
@@ -27,10 +38,10 @@ const (
 
 var packetTypeNames = [...]string{
 	packetTypeInitial:            "initial",
-	packetTypeZeroRTT:            "zeroRTT",
+	packetTypeZeroRTT:            "zerortt",
 	packetTypeHandshake:          "handshake",
 	packetTypeRetry:              "retry",
-	packetTypeVersionNegotiation: "version",
+	packetTypeVersionNegotiation: "version_negotiation",
 	packetTypeShort:              "short",
 }
 
@@ -190,7 +201,7 @@ func (s *packetHeader) decode(b []byte) (int, error) {
 }
 
 func (s *packetHeader) String() string {
-	return fmt.Sprintf("type=%s version=%d dcid=%x scid=%x", s.packetType(), s.version, s.dcid, s.scid)
+	return fmt.Sprintf("packet_type=%s version=%d dcid=%x scid=%x", s.packetType(), s.version, s.dcid, s.scid)
 }
 
 // packetType returns type of the packet basing on header flags.
@@ -316,13 +327,13 @@ func (s *packet) packetNumberOffset(b []byte) (int, error) {
 func (s *packet) String() string {
 	switch s.typ {
 	case packetTypeInitial, packetTypeRetry:
-		return fmt.Sprintf("type=%s version=%d dcid=%x scid=%x token=%x number=%d",
+		return fmt.Sprintf("packet_type=%s version=%d dcid=%x scid=%x token=%x packet_number=%d",
 			s.typ, s.header.version, s.header.dcid, s.header.scid, s.token, s.packetNumber)
 	case packetTypeShort:
-		return fmt.Sprintf("type=%s dcid=%x number=%d",
+		return fmt.Sprintf("packet_type=%s dcid=%x packet_number=%d",
 			s.typ, s.header.dcid, s.packetNumber)
 	default:
-		return fmt.Sprintf("type=%s version=%d dcid=%x scid=%x number=%d",
+		return fmt.Sprintf("packet_type=%s version=%d dcid=%x scid=%x packet_number=%d",
 			s.typ, s.header.version, s.header.dcid, s.header.scid, s.packetNumber)
 	}
 }
@@ -330,7 +341,7 @@ func (s *packet) String() string {
 // Header is for decoding public information of a QUIC packet.
 // This data allows to process packet prior to decryption.
 type Header struct {
-	Type    int // XXX: Need to export packetType?
+	Type    string
 	Flags   byte
 	Version uint32
 	DCID    []byte
@@ -350,7 +361,7 @@ func (s *Header) Decode(b []byte, dcil int) (int, error) {
 		return 0, err
 	}
 	typ := h.packetType()
-	s.Type = int(typ)
+	s.Type = typ.String()
 	s.Flags = h.flags
 	s.Version = h.version
 	s.DCID = h.dcid
@@ -379,8 +390,8 @@ func (s *Header) Decode(b []byte, dcil int) (int, error) {
 }
 
 func (s *Header) String() string {
-	return fmt.Sprintf("type=%s version=%d dcid=%x scid=%x token=%x",
-		packetType(s.Type), s.Version, s.DCID, s.SCID, s.Token)
+	return fmt.Sprintf("packet_type=%s version=%d dcid=%x scid=%x token=%x",
+		s.Type, s.Version, s.DCID, s.SCID, s.Token)
 }
 
 // Version Negotiation Packet: https://quicwg.org/base-drafts/draft-ietf-quic-transport.html#packet-version
